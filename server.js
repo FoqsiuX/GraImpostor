@@ -4,8 +4,35 @@ const fs = require('fs');
 const { randomInt } = require('crypto');
 
 const PORT = process.env.PORT || 3000;
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin';
-const words = ['dom', 'chmura', 'ka\u0142amarz', 'silnik', 'pr\u0105d'];
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Bonileda1!';
+//Funkcja od bazy słówek
+function loadWordList(filename) {
+  const filePath = path.join(__dirname, filename);
+  const raw = fs.readFileSync(filePath, "utf8");
+
+  return Array.from(
+    new Set(
+      raw
+        .split(/\r?\n/)
+        .map(w => w.trim())
+        .filter(Boolean)
+        .filter(w => !w.startsWith("#")) // opcjonalnie komentarze
+    )
+  );
+}
+
+const WORDS_BY_DIFFICULTY = {
+  latwy: loadWordList("words_easy.txt"),
+  sredni: loadWordList("words_medium.txt"),
+  trudny: loadWordList("words_hard.txt"),
+};
+
+console.log("Załadowano słówka:", {
+  latwy: WORDS_BY_DIFFICULTY.latwy.length,
+  sredni: WORDS_BY_DIFFICULTY.sredni.length,
+  trudny: WORDS_BY_DIFFICULTY.trudny.length,
+});
+
 const lobbies = new Map();
 
 const contentTypes = {
@@ -154,6 +181,28 @@ function handleApi(req, res) {
       });
   }
 
+  if (req.method === 'POST' && url.pathname === '/api/lobby/restart') {
+    return parseBody(req)
+      .then(body => {
+        const { code, adminPassword } = body;
+        const lobby = lobbies.get(code);
+        if (!lobby) return sendJson(res, 404, { ok: false, error: 'Lobby nie istnieje' });
+        if (adminPassword !== ADMIN_PASSWORD) {
+          return sendJson(res, 401, { ok: false, error: 'Błędne hasło administratora' });
+        }
+
+        lobby.started = false;
+        lobby.impostorId = null;
+        lobby.word = null;
+
+        return sendJson(res, 200, { ok: true, lobby: lobbySummary(lobby) });
+      })
+      .catch(err => {
+        console.error('restart error', err);
+        sendJson(res, 400, { ok: false, error: 'Nie udało się zrestartować gry' });
+      });
+  }
+
   if (req.method === 'POST' && url.pathname === '/api/lobby/start') {
     return parseBody(req)
       .then(body => {
@@ -169,7 +218,12 @@ function handleApi(req, res) {
         }
         lobby.started = true;
         lobby.impostorId = lobby.players[randomInt(0, lobby.players.length)].id;
-        lobby.word = words[randomInt(0, words.length)];
+        const list = WORDS_BY_DIFFICULTY[lobby.difficulty] || WORDS_BY_DIFFICULTY.latwy;
+        if (!list || list.length === 0) {
+          return sendJson(res, 500, { ok: false, error: "Brak słówek dla wybranego poziomu trudności" });
+        }
+        lobby.word = list[randomInt(0, list.length)];
+
         return sendJson(res, 200, { ok: true, lobby: lobbySummary(lobby) });
       })
       .catch(err => {
@@ -180,6 +234,9 @@ function handleApi(req, res) {
 
   return false;
 }
+
+
+
 
 function serveStatic(req, res) {
   const url = new URL(req.url, 'http://' + req.headers.host);

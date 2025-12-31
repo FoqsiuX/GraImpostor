@@ -130,7 +130,7 @@
   <header>
     <div class="eyebrow">Impostor lobby</div>
     <h1>Utwórz lobby i uruchom grę</h1>
-    <p class="subtitle">Admin ustawia poziom i liczbę graczy, reszta dołącza kodem. Na starcie losujemy impostora albo słówko.</p>
+    <p class="subtitle">Admin ustawia poziom i liczbę graczy, reszta dołącza kodem. Na starcie losujemy impostora i słówko.</p>
   </header>
 
   <main>
@@ -139,7 +139,7 @@
       <div class="row">
         <div>
           <label for="joinName">Twoje imię</label>
-          <input id="joinName" maxlength="32" placeholder="np. Ola" />
+          <input id="joinName" maxlength="32" placeholder="Wpisz imię" />
         </div>
         <div>
           <label for="joinCode">Kod lobby (8 cyfr)</label>
@@ -193,6 +193,7 @@
         </div>
         <div class="players" id="playerList"></div>
         <button id="startBtn">Start gry</button>
+        <button id="restartBtn" hidden>Restart gry</button>
       </div>
     </section>
 
@@ -201,14 +202,14 @@
       <p class="badge">1. Admin loguje się hasłem na dole strony.</p>
       <p class="badge">2. Tworzy lobby, udostępnia 8-cyfrowy kod.</p>
       <p class="badge">3. Gracze dołączają kodem, czekamy aż zbiorą się wszyscy.</p>
-      <p class="badge">4. Admin startuje grę – losujemy impostora albo słówko dla reszty.</p>
+      <p class="badge">4. Admin startuje grę – losujemy impostora i słówko dla reszty.</p>
     </section>
   </main>
 
   <div class="admin-bar">
-    <input id="adminPassword" type="password" placeholder="Hasło administratora (admin)" />
+    <input id="adminPassword" type="password" placeholder="Hasło administratora" />
     <button id="loginBtn">Zaloguj jako administrator</button>
-    <div class="badge" id="loginHint">Hasło domyślne: "admin"</div>
+    
   </div>
 
   <script>
@@ -236,7 +237,7 @@
         adminStatus.className = 'status error';
         return;
       }
-      if (pwd !== 'admin') {
+      if (pwd !== 'Bonileda1!') {
         adminStatus.textContent = 'Nieprawidłowe hasło';
         adminStatus.className = 'status error';
         return;
@@ -329,6 +330,33 @@
       }
     });
 
+      document.getElementById('restartBtn').addEventListener('click', async () => {
+    if (!state.adminAuth || !state.lobbyCode) return;
+    try {
+      const res = await fetch('/api/lobby/restart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: state.lobbyCode, adminPassword: state.adminPassword })
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'Nie udało się zrestartować gry');
+
+      adminStatus.textContent = 'Gra zrestartowana. Możesz ponownie kliknąć "Start gry".';
+      adminStatus.className = 'status success';
+
+      // Ukryj kartę roli u admina (i tak inni gracze też odświeżą się przez polling)
+      roleCard.hidden = true;
+
+      // Odśwież widok lobby
+      renderPlayers(data.lobby.players);
+      updateCounts(data.lobby);
+    } catch (err) {
+      adminStatus.textContent = err.message;
+      adminStatus.className = 'status error';
+    }
+  });
+
+
     function renderPlayers(players = []) {
       playerList.innerHTML = '';
       players.forEach(p => {
@@ -346,6 +374,14 @@
       document.getElementById('playerCount').textContent = count;
       document.getElementById('lobbyStatus').textContent = statusText;
       document.getElementById('lobbyInfo').hidden = false;
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+
+        // Restart ma sens tylko gdy gra już wystartowała
+        restartBtn.hidden = !lobby.started;
+
+        // Start ma sens tylko gdy gra nie wystartowała
+        startBtn.disabled = lobby.started;
     }
 
     async function pollState() {
