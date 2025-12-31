@@ -1,0 +1,12 @@
+﻿{
+  "name": "gra-impostor",
+  "version": "0.1.0",
+  "description": "Prosta gra w zgadywanie z impostorem (frontend + minimalny serwer)",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

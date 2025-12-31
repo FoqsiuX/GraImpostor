@@ -1,0 +1,393 @@
+﻿<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gra Impostor</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #131c32;
+      --panel-2: #162341;
+      --accent: #6ee7b7;
+      --accent-2: #60a5fa;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --danger: #f87171;
+      --shadow: 0 20px 40px rgba(0, 0, 0, 0.35);
+      --radius: 16px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: radial-gradient(circle at 20% 20%, rgba(96,165,250,0.15), transparent 25%),
+                  radial-gradient(circle at 80% 30%, rgba(110,231,183,0.18), transparent 28%),
+                  var(--bg);
+      color: var(--text);
+      font-family: 'Manrope', 'Segoe UI', 'Helvetica Neue', sans-serif;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      padding: 32px 24px 12px;
+      text-align: center;
+    }
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(110, 231, 183, 0.08);
+      color: var(--accent);
+      font-weight: 700;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+    h1 {
+      margin: 12px 0 8px;
+      font-size: clamp(28px, 5vw, 40px);
+    }
+    .subtitle {
+      color: var(--muted);
+      margin: 0;
+      font-size: 16px;
+    }
+    main {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      padding: 12px 16px 100px;
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+      flex: 1;
+    }
+    .card {
+      background: linear-gradient(145deg, var(--panel), var(--panel-2));
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+    .card h2 {
+      margin: 0 0 12px;
+      font-size: 20px;
+    }
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 600;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    input, select, button {
+      width: 100%;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      font-size: 15px;
+      font-family: inherit;
+    }
+    button {
+      margin-top: 6px;
+      background: linear-gradient(120deg, var(--accent), var(--accent-2));
+      border: none;
+      color: #0b1224;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 120ms ease, box-shadow 120ms ease;
+      box-shadow: 0 10px 25px rgba(96,165,250,0.35);
+    }
+    button:hover { transform: translateY(-1px); }
+    button:active { transform: translateY(0); }
+    .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+    .status { margin-top: 10px; padding: 12px; border-radius: 12px; background: rgba(255,255,255,0.04); color: var(--muted); font-size: 14px; }
+    .status.success { color: var(--accent); }
+    .status.error { color: var(--danger); }
+    .pill { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 999px; background: rgba(255,255,255,0.06); font-size: 13px; margin-right: 6px; }
+    .players { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .player { padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.07); font-size: 14px; }
+    .role-card { margin-top: 12px; padding: 14px; border-radius: 12px; background: rgba(255,255,255,0.03); border: 1px dashed rgba(255,255,255,0.1); }
+    .divider { height: 1px; background: rgba(255,255,255,0.06); margin: 14px 0; }
+    .admin-bar { position: sticky; bottom: 0; padding: 14px 16px; background: linear-gradient(0deg, rgba(12,18,34,0.95), rgba(12,18,34,0.92)); border-top: 1px solid rgba(255,255,255,0.08); backdrop-filter: blur(8px); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .admin-bar input { flex: 1; min-width: 180px; }
+    .admin-bar button { width: auto; padding: 12px 18px; margin-top: 0; }
+    .badge { font-size: 12px; color: var(--muted); }
+    @media (max-width: 640px) {
+      main { padding: 8px 12px 120px; }
+      .admin-bar { flex-direction: column; align-items: stretch; }
+      .admin-bar button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="eyebrow">Impostor lobby</div>
+    <h1>Utwórz lobby i uruchom grę</h1>
+    <p class="subtitle">Admin ustawia poziom i liczbę graczy, reszta dołącza kodem. Na starcie losujemy impostora albo słówko.</p>
+  </header>
+
+  <main>
+    <section class="card" id="joinCard">
+      <h2>Dołącz do lobby</h2>
+      <div class="row">
+        <div>
+          <label for="joinName">Twoje imię</label>
+          <input id="joinName" maxlength="32" placeholder="np. Ola" />
+        </div>
+        <div>
+          <label for="joinCode">Kod lobby (8 cyfr)</label>
+          <input id="joinCode" maxlength="8" inputmode="numeric" placeholder="12345678" />
+        </div>
+      </div>
+      <button id="joinBtn">Dołącz</button>
+      <div id="joinStatus" class="status"></div>
+
+      <div class="role-card" id="roleCard" hidden>
+        <div class="pill" id="roleLabel"></div>
+        <div id="roleText"></div>
+        <p class="badge" id="roleHint"></p>
+      </div>
+    </section>
+
+    <section class="card" id="adminCard" hidden>
+      <h2>Panel administratora</h2>
+      <div class="row">
+        <div>
+          <label for="adminName">Imię administratora</label>
+          <input id="adminName" maxlength="32" placeholder="np. Admin" />
+        </div>
+        <div>
+          <label for="maxPlayers">Liczba graczy</label>
+          <input id="maxPlayers" type="number" min="3" max="12" value="6" />
+        </div>
+      </div>
+      <label for="difficulty">Poziom trudności</label>
+      <select id="difficulty">
+        <option value="latwy">Łatwy</option>
+        <option value="sredni">Średni</option>
+        <option value="trudny">Trudny</option>
+      </select>
+      <button id="createBtn">Utwórz lobby</button>
+      <div id="adminStatus" class="status"></div>
+
+      <div id="lobbyInfo" class="role-card" hidden>
+        <div class="pill"><strong>Kod:</strong> <span id="lobbyCode"></span></div>
+        <p class="badge">Podziel się tym kodem ze wszystkimi graczami.</p>
+        <div class="divider"></div>
+        <div class="row">
+          <div>
+            <label>Gracze</label>
+            <div id="playerCount"></div>
+          </div>
+          <div>
+            <label>Status</label>
+            <div id="lobbyStatus"></div>
+          </div>
+        </div>
+        <div class="players" id="playerList"></div>
+        <button id="startBtn">Start gry</button>
+      </div>
+    </section>
+
+    <section class="card" id="helpCard">
+      <h2>Jak to działa?</h2>
+      <p class="badge">1. Admin loguje się hasłem na dole strony.</p>
+      <p class="badge">2. Tworzy lobby, udostępnia 8-cyfrowy kod.</p>
+      <p class="badge">3. Gracze dołączają kodem, czekamy aż zbiorą się wszyscy.</p>
+      <p class="badge">4. Admin startuje grę – losujemy impostora albo słówko dla reszty.</p>
+    </section>
+  </main>
+
+  <div class="admin-bar">
+    <input id="adminPassword" type="password" placeholder="Hasło administratora (admin)" />
+    <button id="loginBtn">Zaloguj jako administrator</button>
+    <div class="badge" id="loginHint">Hasło domyślne: "admin"</div>
+  </div>
+
+  <script>
+    const state = {
+      adminAuth: false,
+      adminPassword: '',
+      lobbyCode: null,
+      playerId: null,
+      isAdminCreator: false,
+      lastRole: null,
+    };
+
+    const joinStatus = document.getElementById('joinStatus');
+    const adminStatus = document.getElementById('adminStatus');
+    const roleCard = document.getElementById('roleCard');
+    const roleLabel = document.getElementById('roleLabel');
+    const roleText = document.getElementById('roleText');
+    const roleHint = document.getElementById('roleHint');
+    const playerList = document.getElementById('playerList');
+
+    document.getElementById('loginBtn').addEventListener('click', () => {
+      const pwd = document.getElementById('adminPassword').value.trim();
+      if (!pwd) {
+        adminStatus.textContent = 'Podaj hasło administratora';
+        adminStatus.className = 'status error';
+        return;
+      }
+      if (pwd !== 'admin') {
+        adminStatus.textContent = 'Nieprawidłowe hasło';
+        adminStatus.className = 'status error';
+        return;
+      }
+      state.adminAuth = true;
+      state.adminPassword = pwd;
+      document.getElementById('adminCard').hidden = false;
+      adminStatus.textContent = 'Zalogowano jako administrator';
+      adminStatus.className = 'status success';
+      document.getElementById('loginHint').textContent = 'Jesteś zalogowany. Hasło można zmienić w zmiennej środowiskowej ADMIN_PASSWORD.';
+    });
+
+    document.getElementById('createBtn').addEventListener('click', async () => {
+      if (!state.adminAuth) {
+        adminStatus.textContent = 'Zaloguj się hasłem na dole strony';
+        adminStatus.className = 'status error';
+        return;
+      }
+      const adminName = document.getElementById('adminName').value.trim();
+      const maxPlayers = document.getElementById('maxPlayers').value;
+      const difficulty = document.getElementById('difficulty').value;
+      try {
+        const res = await fetch('/api/lobby/create', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ adminPassword: state.adminPassword, adminName, maxPlayers, difficulty })
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || 'Błąd');
+        state.lobbyCode = data.code;
+        state.playerId = data.playerId;
+        state.isAdminCreator = true;
+        adminStatus.textContent = `Lobby utworzone. Kod: ${data.code}`;
+        adminStatus.className = 'status success';
+        document.getElementById('lobbyCode').textContent = data.code;
+        document.getElementById('lobbyInfo').hidden = false;
+        document.getElementById('lobbyStatus').textContent = 'Oczekiwanie na graczy';
+        document.getElementById('playerCount').textContent = `1 / ${data.lobby.maxPlayers}`;
+        renderPlayers(data.lobby.players);
+      } catch (err) {
+        adminStatus.textContent = err.message;
+        adminStatus.className = 'status error';
+      }
+    });
+
+    document.getElementById('joinBtn').addEventListener('click', async () => {
+      const name = document.getElementById('joinName').value.trim();
+      const code = document.getElementById('joinCode').value.trim();
+      if (!name || !code) {
+        joinStatus.textContent = 'Podaj imię i kod lobby';
+        joinStatus.className = 'status error';
+        return;
+      }
+      try {
+        const res = await fetch('/api/lobby/join', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, code })
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || 'Nie udało się dołączyć');
+        state.lobbyCode = code;
+        state.playerId = data.playerId;
+        joinStatus.textContent = `Dołączono! Twój numer gracza: ${data.playerId}`;
+        joinStatus.className = 'status success';
+        renderPlayers(data.lobby.players);
+        updateCounts(data.lobby);
+      } catch (err) {
+        joinStatus.textContent = err.message;
+        joinStatus.className = 'status error';
+      }
+    });
+
+    document.getElementById('startBtn').addEventListener('click', async () => {
+      if (!state.adminAuth || !state.lobbyCode) return;
+      try {
+        const res = await fetch('/api/lobby/start', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: state.lobbyCode, adminPassword: state.adminPassword })
+        });
+        const data = await res.json();
+        if (!data.ok) throw new Error(data.error || 'Nie udało się uruchomić gry');
+        adminStatus.textContent = 'Gra wystartowała! Każdy gracz może sprawdzić swoją rolę.';
+        adminStatus.className = 'status success';
+        fetchRole();
+      } catch (err) {
+        adminStatus.textContent = err.message;
+        adminStatus.className = 'status error';
+      }
+    });
+
+    function renderPlayers(players = []) {
+      playerList.innerHTML = '';
+      players.forEach(p => {
+        const div = document.createElement('div');
+        div.className = 'player';
+        div.textContent = `#${p.id} ${p.name}${p.isAdmin ? ' (admin)' : ''}`;
+        playerList.appendChild(div);
+      });
+    }
+
+    function updateCounts(lobby) {
+      if (!lobby) return;
+      const count = `${lobby.players.length} / ${lobby.maxPlayers}`;
+      const statusText = lobby.started ? 'Gra trwa' : (lobby.filled ? 'Pełne' : 'Oczekiwanie');
+      document.getElementById('playerCount').textContent = count;
+      document.getElementById('lobbyStatus').textContent = statusText;
+      document.getElementById('lobbyInfo').hidden = false;
+    }
+
+    async function pollState() {
+      if (!state.lobbyCode) return;
+      try {
+        const res = await fetch(`/api/lobby/state?code=${state.lobbyCode}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data.ok) return;
+        renderPlayers(data.lobby.players);
+        updateCounts(data.lobby);
+        if (data.lobby.started) fetchRole();
+      } catch (err) {
+        // ignore
+      }
+    }
+
+    async function fetchRole() {
+      if (!state.lobbyCode || !state.playerId) return;
+      try {
+        const res = await fetch(`/api/lobby/role?code=${state.lobbyCode}&playerId=${state.playerId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!data.ok) return;
+        roleCard.hidden = false;
+        if (data.isImpostor) {
+          roleLabel.textContent = 'Impostor';
+          roleLabel.style.color = 'var(--danger)';
+          roleText.textContent = 'Jesteś impostorem. Spróbuj wtopić się w grupę!';
+          roleHint.textContent = 'Nie zdradzaj się. Zgaduje reszta.';
+        } else {
+          roleLabel.textContent = 'Gracz';
+          roleLabel.style.color = 'var(--accent)';
+          roleText.innerHTML = `Twoje słowo: <strong>${data.word}</strong>`;
+          roleHint.textContent = 'Spróbuj opisać słowo, nie zdradzając go zbyt łatwo.';
+        }
+      } catch (err) {
+        // ignore
+      }
+    }
+
+    setInterval(pollState, 2000);
+  </script>
+</body>
+</html>
